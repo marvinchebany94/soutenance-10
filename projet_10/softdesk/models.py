@@ -24,8 +24,10 @@ class User(AbstractUser):
 
     def correct_lentgh_passwd(self):
         passwd = self.password
-        if len(passwd) < 5:
+        if len(str(passwd)) < 5:
             return "Mot de passe trop court, 5 caractères au minimum"
+        else:
+            return True
 
 
 class Projects(models.Model):
@@ -41,6 +43,13 @@ class Projects(models.Model):
     types = models.CharField(choices=TYPES, blank=False, max_length=20)
     author_user_id = models.ForeignKey(User, on_delete=models.CASCADE, blank=False)
     time_created = models.DateTimeField(auto_now_add=True)
+
+    def user_has_project(self):
+        try:
+            Projects.objects.filter(author_user_id=self.author_user_id)
+            return True
+        except ObjectDoesNotExist:
+            return False
 
 
 class Contributors(models.Model):

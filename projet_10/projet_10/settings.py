@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'softdesk',
-    'projet_10'
+    #'projet_10'
 ]
 
 MIDDLEWARE = [

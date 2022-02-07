@@ -16,13 +16,17 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
-from softdesk.views import ConnexionAPIView, SignUp, sign_up, LoginApiView
+from softdesk.views import ConnexionAPIView, sign_up, LoginApiView, get_projects
+
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView,\
     TokenVerifyView
+from softdesk.views import TestView
+
 
 router = routers.SimpleRouter()
 router.register('users', ConnexionAPIView, basename="users")
 router.register('login', LoginApiView, basename="login")
+router.register('test', TestView, basename="test")
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -32,5 +36,5 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name="refreshtoken"),
     path('verifytoken/', TokenVerifyView.as_view(), name="verifytoken"),
     path('api/signup/', sign_up),
-
+    path('api/projects/', get_projects),
 ]
