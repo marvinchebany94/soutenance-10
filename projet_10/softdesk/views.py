@@ -184,7 +184,7 @@ Voir aussi PREPEND_WWW.
         else:
             queryset = Projects.objects.all()
             pk = self.kwargs.get('pk')
-            if type(pk) != 'str':
+            if type(pk) != 'int':
                 return Response('Tu dois entrer un chiffre.')
             user = get_object_or_404(User, id=request.user.id)
             try:
@@ -211,26 +211,26 @@ Voir aussi PREPEND_WWW.
             else:
                 return Response('il n y a pas de projet')
 
-
-class ContributorsView(ModelViewSet):
-    queryset = Contributors.objects.all()
-    serializer_class = ContributorsSerializers
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication]
-
-    def post(self, request, *args, **kwargs):
+    @action(methods=['get'], detail=True, permission_classes=[IsAuthenticated],
+            authentication_classes=[JWTAuthentication])
+    def users(self, request, *args, **kwargs):
+        print(self.kwargs.get('pk'))
         if not self.kwargs.get('pk'):
             return Response("Tu n'as pas entré l'id du projet.")
         else:
             pk = self.kwargs.get('pk')
-        user = get_object_or_404(User, id=request.user.id)
-        project = get_object_or_404(Contributors, id=pk, role='responsable', user_id=user)
-
-        if request.POST.get('email'):
-            return Response('True')
-        else:
-            return Response('False')
-
-
-
-
+            pk = int(pk)
+            try:
+                int(pk)
+            except ValueError:
+                return Response('Tu dois entrer un chiffre.')
+            projects = Projects.objects.all()
+            users = User.objects.all()
+            project = get_object_or_404(projects, id=pk)
+            contributors_id = []
+            contributors = Contributors.objects.filter(project_id=project)
+            for user in contributors:
+                contributors_id.append(user.user_id.id)
+            users_associated = users.filter(id__in=contributors_id).values('id', 'email',
+                                                                           'first_name', 'last_name')
+            return Response(users_associated)

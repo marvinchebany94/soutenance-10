@@ -14,6 +14,7 @@ class User(AbstractUser):
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ('password',)
+    list_display = ('last_login', 'is_superuser', 'is_staff')
 
     def unique_email(self):
         try:

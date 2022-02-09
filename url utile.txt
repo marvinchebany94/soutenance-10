@@ -1,0 +1,3 @@
+https://stackoverflow.com/questions/54044216/expected-a-response-httpresponse-or-httpstreamingresponse-to-be-returned
+https://stackoverflow.com/questions/16790375/django-object-is-not-json-serializable
+https://docs.djangoproject.com/fr/4.0/ref/models/querysets/
