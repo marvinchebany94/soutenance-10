@@ -107,8 +107,11 @@ class ProjectsView(ModelViewSet):
                 project.save()
                 project = Projects.objects.get(author_user_id=author_user, title=title)
                 try:
-                    contributor = Contributors(user_id=author_user, project_id=project,
-                                               permission='crud', role='responsable')
+
+                    contributor = Contributors(permission='crud', role='responsable')
+                    contributor.save()
+                    contributor.user_id.add(author_user)
+                    contributor.project_id.add(project)
                     contributor.save()
                     return Response('le project a bien été enregistré')
                 except IntegrityError:
@@ -127,7 +130,7 @@ class ProjectsView(ModelViewSet):
             project = get_object_or_404(projects, id=pk, author_user_id=request.user)
             return project
 
-    def patch(self, request, *args, **kwargs):
+    def partial_update(self, request, *args, **kwargs):
         """
         Pensez à retirer l'erreur si uen url ne se finit pas par un /
         APPEND_SLASH¶
@@ -145,10 +148,18 @@ Voir aussi PREPEND_WWW.
             return Response("Tu n'as pas entré l'id du projet.")
         else:
             pk = self.kwargs.get('pk')
-        project = Projects.objects.get(pk=pk, author_user_id=request.user)
-        print(project.title)
-        form = ProjectsSerializers(Projects, data=request.data, partial=True)
+            try:
+                int(pk)
+            except ValueError:
+                return Response('Tu dois entrer un chiffre.')
+        project = get_object_or_404(Projects, id=str(pk), author_user_id=request.user)
+        form = ProjectsSerializers(project, data=request.data, partial=True)
         if form.is_valid():
+            form.save()
+            return Response(form.data)
+        else:
+            return Response('formulaire mal rempli')
+            """
             if form.data['title']:
                 title = form.data['title']
                 project.title = title
@@ -160,31 +171,37 @@ Voir aussi PREPEND_WWW.
                 project.types = types
             try:
                 project.save()
-                return Response(project)
+                return Response("Le projet a été modifié")
             except IntegrityError:
                 return Response("Erreur pendant la mise à jour du projet")
         else:
             return Response('Formulaire mal rempli')
 
-    def delete(self, request, *kwarg, **kwargs):
+    """
+    def destroy(self, request, *args, **kwargs):
         if not self.kwargs.get('pk'):
             return Response("Tu n'as pas entré l'id du projet.")
         else:
-            pk = self.kwargs.get('pk')
-
-        project = get_object_or_404(Projects, pk=pk, author_user_id=request.user)
+            try:
+                pk = self.kwargs.get('pk')
+                int(pk)
+            except ValueError:
+                return Response('la valeur n est pas un chiffre')
+        project = get_object_or_404(Projects, id=pk, author_user_id=request.user)
         project.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
+"""
     @action(methods=['post'], permission_classes=[IsAuthenticated],
-            authentication_classes=[JWTAuthentication], detail=True)
-    def users(self, request, *args, **kwargs):
+            authentication_classes=[JWTAuthentication], detail=True, url_path='users')
+    def add_users_to_project(self, request, *args, **kwargs):
         if not self.kwargs.get('pk'):
             return Response("Tu n'as pas entré l'id du projet.")
         else:
             queryset = Projects.objects.all()
             pk = self.kwargs.get('pk')
-            if type(pk) != 'int':
+            try:
+                int(pk)
+            except ValueError:
                 return Response('Tu dois entrer un chiffre.')
             user = get_object_or_404(User, id=request.user.id)
             try:
@@ -212,8 +229,8 @@ Voir aussi PREPEND_WWW.
                 return Response('il n y a pas de projet')
 
     @action(methods=['get'], detail=True, permission_classes=[IsAuthenticated],
-            authentication_classes=[JWTAuthentication])
-    def users(self, request, *args, **kwargs):
+            authentication_classes=[JWTAuthentication], url_path='users')
+    def users_get_project(self, request, *args, **kwargs):
         print(self.kwargs.get('pk'))
         if not self.kwargs.get('pk'):
             return Response("Tu n'as pas entré l'id du projet.")
@@ -248,22 +265,16 @@ Voir aussi PREPEND_WWW.
             int(pk_users)
         except ValueError:
             return Response("Il faut entrer des chiffres.")
-        return Response('Tout est bon')
-
-
-class ContributorsView(ModelViewSet):
-    queryset = Contributors.objects.all()
-    serializer_class = ContributorsSerializers
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication]
-
-    @action(methods=['delete'], detail=True, permission_classes=[IsAuthenticated],
-            authentication_classes=[JWTAuthentication])
-    def delete(self, request, *args, **kwargs):
-        print(self.kwargs.get('pk'))
-        print(self.kwargs.get('user_id'))
-
-@action(methods=['delete'], detail=True, permission_classes=[IsAuthenticated],
-            authentication_classes=[JWTAuthentication])
-def delete_user_from_project(request, pk, user_id):
-    print(pk, user_id)
+        project = Projects.objects.get(id=pk, author_user_id=request.user)
+        user = User.objects.get(id=pk_users)
+        try:
+            contributor = Contributors.objects.get(project_id=project, user_id=user,
+                                                   role='contributeur')
+        except ObjectDoesNotExist:
+            return Response('mauvaise requete')
+        
+        contributor = get_object_or_404(contributors, project_id=pk, user_id=pk_users,
+                                        role='contributeur')
+        return Response('Tu es bien createur du project, et l ip corespond à un contributeur')
+        
+"""

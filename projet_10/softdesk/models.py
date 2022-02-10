@@ -54,8 +54,8 @@ class Projects(models.Model):
 
 
 class Contributors(models.Model):
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE, blank=False)
-    project_id = models.ForeignKey(Projects, on_delete=models.CASCADE, blank=False)
+    user_id = models.ManyToManyField(User, blank=False)
+    project_id = models.ManyToManyField(Projects, blank=False)
     PERMISSION = [
         ('CRUD', 'crud'),
         ('RC', 'rc'),

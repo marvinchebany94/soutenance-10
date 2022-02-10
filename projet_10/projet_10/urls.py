@@ -21,13 +21,11 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
     TokenVerifyView
 from softdesk.views import ProjectsView
 
-from softdesk.views import ContributorsView
-
 router = routers.SimpleRouter()
 #router.register('users', ConnexionAPIView, basename="users")
 router.register('login', LoginApiView, basename="login")
 router.register(r'projects', ProjectsView, basename="projects")
-router.register(r'users', ContributorsView)
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
