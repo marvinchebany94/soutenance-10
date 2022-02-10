@@ -234,3 +234,36 @@ Voir aussi PREPEND_WWW.
             users_associated = users.filter(id__in=contributors_id).values('id', 'email',
                                                                            'first_name', 'last_name')
             return Response(users_associated)
+
+    @action(methods=['delete'], detail=True, permission_classes=[IsAuthenticated],
+            authentication_classes=[JWTAuthentication], url_path=r'users/(?P<pk_users>[^/.]+)')
+    def users(self, request, *args, **kwargs):
+        try:
+            pk = self.kwargs.get('pk')
+            pk_users = self.kwargs.get('pk_users')
+        except ValueError:
+            return Response("Il faut entrer l'id du project et l'id de la personne que tu veux enlever")
+        try:
+            int(pk)
+            int(pk_users)
+        except ValueError:
+            return Response("Il faut entrer des chiffres.")
+        return Response('Tout est bon')
+
+
+class ContributorsView(ModelViewSet):
+    queryset = Contributors.objects.all()
+    serializer_class = ContributorsSerializers
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    @action(methods=['delete'], detail=True, permission_classes=[IsAuthenticated],
+            authentication_classes=[JWTAuthentication])
+    def delete(self, request, *args, **kwargs):
+        print(self.kwargs.get('pk'))
+        print(self.kwargs.get('user_id'))
+
+@action(methods=['delete'], detail=True, permission_classes=[IsAuthenticated],
+            authentication_classes=[JWTAuthentication])
+def delete_user_from_project(request, pk, user_id):
+    print(pk, user_id)
