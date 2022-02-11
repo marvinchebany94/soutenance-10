@@ -7,8 +7,8 @@ from rest_framework.decorators import api_view, action
 from rest_framework.mixins import CreateModelMixin
 from rest_framework.viewsets import ModelViewSet
 from .serializers import UsersSerializers, SignUpSerializers, LoginSerializers, ProjectsSerializers, \
-    ContributorsSerializers
-from .models import User, Projects, Contributors
+    ContributorsSerializers, IssuesSerializers
+from .models import User, Projects, Contributors, Issues
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView,\
     TokenVerifyView
@@ -83,6 +83,13 @@ class ProjectsView(ModelViewSet):
     authentication_classes = [JWTAuthentication]
 
     def get_queryset(self):
+        if self.kwargs.get('pk'):
+            try:
+                pk = self.kwargs.get('pk')
+                project = Projects.objects.all()
+                return project.filter(id=pk, author_user_id=self.request.user)
+            except ObjectDoesNotExist:
+                return Response("Le project n'existe pas.")
         liste_projects = []
         user = User.objects.get(id=self.request.user.id)
         queryset = Projects.objects.all()
@@ -107,8 +114,9 @@ class ProjectsView(ModelViewSet):
                 project.save()
                 project = Projects.objects.get(author_user_id=author_user, title=title)
                 try:
-                    contributor = Contributors(user_id=author_user, project_id=project,
-                                               permission='crud', role='responsable')
+
+                    contributor = Contributors(permission='crud', role='responsable',
+                                               user_id=author_user, project_id=project)
                     contributor.save()
                     return Response('le project a bien été enregistré')
                 except IntegrityError:
@@ -119,15 +127,15 @@ class ProjectsView(ModelViewSet):
         else:
             return Response("Erreur pendant le remplissage du formulaire.")
 
-    def get(self, request, pk):
-        projects = Projects.objects.all()
-        if not pk:
-            return projects.filter(author_user_id=request.user)
-        else:
-            project = get_object_or_404(projects, id=pk, author_user_id=request.user)
-            return project
+    @action(methods=['get'], permission_classes=[IsAuthenticated],
+            authentication_classes=[JWTAuthentication], detail=True)
+    def get_project(self, request, pk):
+        #project = get_object_or_404(Projects, id=pk, author_user_id=request.user)
+        project = Projects.objects.all()
+        print('ça bug ici')
+        return project.filter(id=pk, author_user_id_id=request.user.id)
 
-    def patch(self, request, *args, **kwargs):
+    def partial_update(self, request, *args, **kwargs):
         """
         Pensez à retirer l'erreur si uen url ne se finit pas par un /
         APPEND_SLASH¶
@@ -145,81 +153,76 @@ Voir aussi PREPEND_WWW.
             return Response("Tu n'as pas entré l'id du projet.")
         else:
             pk = self.kwargs.get('pk')
-        project = Projects.objects.get(pk=pk, author_user_id=request.user)
-        print(project.title)
-        form = ProjectsSerializers(Projects, data=request.data, partial=True)
-        if form.is_valid():
-            if form.data['title']:
-                title = form.data['title']
-                project.title = title
-            if form.data['description']:
-                description = form.data['description']
-                project.description = description
-            if form.data['types']:
-                types = form.data['types']
-                project.types = types
             try:
-                project.save()
-                return Response(project)
-            except IntegrityError:
-                return Response("Erreur pendant la mise à jour du projet")
+                int(pk)
+            except ValueError:
+                return Response('Tu dois entrer un chiffre.')
+        project = get_object_or_404(Projects, id=str(pk), author_user_id=request.user)
+        form = ProjectsSerializers(project, data=request.data, partial=True)
+        if form.is_valid():
+            form.save()
+            return Response(form.data)
         else:
-            return Response('Formulaire mal rempli')
+            return Response('formulaire mal rempli')
 
-    def delete(self, request, *kwarg, **kwargs):
+    def destroy(self, request, *args, **kwargs):
         if not self.kwargs.get('pk'):
             return Response("Tu n'as pas entré l'id du projet.")
         else:
-            pk = self.kwargs.get('pk')
-
-        project = get_object_or_404(Projects, pk=pk, author_user_id=request.user)
+            try:
+                pk = self.kwargs.get('pk')
+                int(pk)
+            except ValueError:
+                return Response('la valeur n est pas un chiffre')
+        project = get_object_or_404(Projects, id=pk, author_user_id=request.user)
         project.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(methods=['post'], permission_classes=[IsAuthenticated],
-            authentication_classes=[JWTAuthentication], detail=True)
-    def users(self, request, *args, **kwargs):
+            authentication_classes=[JWTAuthentication], detail=True, url_path='users')
+    def add_users_to_project(self, request, *args, **kwargs):
         if not self.kwargs.get('pk'):
             return Response("Tu n'as pas entré l'id du projet.")
         else:
             queryset = Projects.objects.all()
             pk = self.kwargs.get('pk')
-            if type(pk) != 'int':
+            try:
+                int(pk)
+            except ValueError:
                 return Response('Tu dois entrer un chiffre.')
             user = get_object_or_404(User, id=request.user.id)
             try:
-                Projects.objects.get(id=pk, author_user_id=request.user.id)
+                project = Projects.objects.get(id=pk, author_user_id=request.user.id)
             except ObjectDoesNotExist:
                 return Response("le projet n'est pas à toi.")
-            if Contributors.objects.get(project_id_id=pk, user_id_id=user.id, role="responsable"):
-                if request.POST.get('email'):
-                    email = request.POST.get('email')
-                    user_to_add = get_object_or_404(User, email=email)
-                    if Contributors.objects.get(project_id_id=pk, user_id=user_to_add, role='contributeur'):
-                        return Response("Cette personne est déjà associé à ce projet.")
-                    try:
-                        contributor = Contributors(user_id=user_to_add, role='contributeur',
-                                                   project_id_id=pk, permission='rc')
-                        contributor.save()
-                    except IntegrityError:
-                        return Response("Erreur pendant la sauvegarde.")
-                    return Response("L'utilisateur a bien été ajouté en tant que contributeur\
+            get_object_or_404(Contributors, project_id=project, user_id=user, role="responsable")
+            if request.POST.get('email'):
+                email = request.POST.get('email')
+                user_to_add = get_object_or_404(User, email=email)
+                try:
+                    Contributors.objects.get(project_id=project, user_id=user_to_add, role='contributeur')
+                    return Response("Cette personne est déjà associé à ce projet.")
+                except ObjectDoesNotExist:
+                    pass
+                try:
+                    contributor = Contributors(role='contributeur', permission='rc',
+                                               user_id=user_to_add, project_id=project)
+                    contributor.save()
+                except IntegrityError:
+                    return Response("Erreur pendant la sauvegarde.")
+                return Response("L'utilisateur a bien été ajouté en tant que contributeur\
  au projet")
-                else:
-                    return Response("Tu as oublié d'entrer la variable email et de lui assigner\
- une valeur")
             else:
-                return Response('il n y a pas de projet')
+                return Response("Tu as oublié d'entrer la variable email et de lui assigner\
+ une valeur")
 
     @action(methods=['get'], detail=True, permission_classes=[IsAuthenticated],
-            authentication_classes=[JWTAuthentication])
-    def users(self, request, *args, **kwargs):
-        print(self.kwargs.get('pk'))
+            authentication_classes=[JWTAuthentication], url_path='users')
+    def get(self, request, *args, **kwargs):
         if not self.kwargs.get('pk'):
             return Response("Tu n'as pas entré l'id du projet.")
         else:
             pk = self.kwargs.get('pk')
-            pk = int(pk)
             try:
                 int(pk)
             except ValueError:
@@ -230,10 +233,11 @@ Voir aussi PREPEND_WWW.
             contributors_id = []
             contributors = Contributors.objects.filter(project_id=project)
             for user in contributors:
-                contributors_id.append(user.user_id.id)
-            users_associated = users.filter(id__in=contributors_id).values('id', 'email',
-                                                                           'first_name', 'last_name')
-            return Response(users_associated)
+                contributors_id.append(user.user_id_id)
+            queryset = users.filter(id__in=contributors_id).values('id', 'email',
+                                                                   'first_name', 'last_name')
+
+            return Response(queryset)
 
     @action(methods=['delete'], detail=True, permission_classes=[IsAuthenticated],
             authentication_classes=[JWTAuthentication], url_path=r'users/(?P<pk_users>[^/.]+)')
@@ -246,24 +250,41 @@ Voir aussi PREPEND_WWW.
         try:
             int(pk)
             int(pk_users)
+            print(pk_users)
         except ValueError:
             return Response("Il faut entrer des chiffres.")
-        return Response('Tout est bon')
+        try:
+            project = Projects.objects.get(id=pk, author_user_id=request.user)
+        except ObjectDoesNotExist:
+            return Response('Le project n existe pas.')
+        try:
+            user_to_delete = User.objects.get(id=pk_users)
+        except ObjectDoesNotExist:
+            return Response("La personne recherchée n'existe pas.")
+        try:
+            contributor = Contributors.objects.get(project_id=project, user_id=user_to_delete)
+        except ObjectDoesNotExist:
+            return Response('La personne ne figure pas dans la liste des contributeurs.')
+        if contributor.role == 'contributeur':
+            contributor.delete()
+            return Response("La personne a bien été supprimée.")
+        else:
+            return Response('Tu ne peux pas te supprimer de ton propre project.')
 
-
-class ContributorsView(ModelViewSet):
-    queryset = Contributors.objects.all()
-    serializer_class = ContributorsSerializers
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication]
-
-    @action(methods=['delete'], detail=True, permission_classes=[IsAuthenticated],
-            authentication_classes=[JWTAuthentication])
-    def delete(self, request, *args, **kwargs):
-        print(self.kwargs.get('pk'))
-        print(self.kwargs.get('user_id'))
-
-@action(methods=['delete'], detail=True, permission_classes=[IsAuthenticated],
-            authentication_classes=[JWTAuthentication])
-def delete_user_from_project(request, pk, user_id):
-    print(pk, user_id)
+    @action(methods=['get'], detail=True, permission_classes=[IsAuthenticated],
+            authentication_classes=[JWTAuthentication],url_path='issues')
+    def get_issues_from_project(self, request, *args, **kwargs):
+        if self.kwargs.get('pk'):
+            pk = self.kwargs.get('pk')
+            try:
+                int(pk)
+                try:
+                    project = Projects.objects.get(id=pk)
+                except ObjectDoesNotExist:
+                    return Response("Le project n'existe pas")
+                issues = Issues.objects.all()
+                return Response(issues.filter(project_id=project).values())
+            except ValueError:
+                return Response("Il faut entrer un chiffre")
+        else:
+            return Response("Tu dois entrer l'id du projet")

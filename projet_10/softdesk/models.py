@@ -54,8 +54,8 @@ class Projects(models.Model):
 
 
 class Contributors(models.Model):
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE, blank=False)
-    project_id = models.ForeignKey(Projects, on_delete=models.CASCADE, blank=False)
+    user_id = models.ForeignKey(User, blank=False, related_name="user", on_delete=models.CASCADE)
+    project_id = models.ForeignKey(Projects, blank=False, related_name="project", on_delete=models.CASCADE)
     PERMISSION = [
         ('CRUD', 'crud'),
         ('RC', 'rc'),

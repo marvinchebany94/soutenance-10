@@ -36,7 +36,7 @@ class CommentsSerializers(ModelSerializer):
 class SignUpSerializers(ModelSerializer):
     class Meta:
         model = User
-        fields = '__all__'
+        fields = ['email', 'password', 'first_name', 'last_name']
 
 
 class LoginSerializers(ModelSerializer):
