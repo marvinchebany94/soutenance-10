@@ -24,7 +24,7 @@ class ContributorsSerializers(ModelSerializer):
 class IssuesSerializers(ModelSerializer):
     class Meta:
         model = Issues
-        fields = ['title', 'desc', 'tag', 'priority', 'project_id', 'status', 'auteur_user_id', 'time_created']
+        fields = ['title', 'desc', 'tag', 'priority', 'status']
 
 
 class CommentsSerializers(ModelSerializer):

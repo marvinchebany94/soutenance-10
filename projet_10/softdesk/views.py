@@ -272,7 +272,7 @@ Voir aussi PREPEND_WWW.
             return Response('Tu ne peux pas te supprimer de ton propre project.')
 
     @action(methods=['get'], detail=True, permission_classes=[IsAuthenticated],
-            authentication_classes=[JWTAuthentication],url_path='issues')
+            authentication_classes=[JWTAuthentication], url_path='issues')
     def get_issues_from_project(self, request, *args, **kwargs):
         if self.kwargs.get('pk'):
             pk = self.kwargs.get('pk')
@@ -288,3 +288,72 @@ Voir aussi PREPEND_WWW.
                 return Response("Il faut entrer un chiffre")
         else:
             return Response("Tu dois entrer l'id du projet")
+
+    @action(methods=['post'], detail=True, permission_classes=[IsAuthenticated],
+            authentication_classes=[JWTAuthentication], url_path='issues')
+    def create_issues(self, request, *args, **kwargs):
+        if self.kwargs.get('pk'):
+            pk = self.kwargs.get('pk')
+            try:
+                int(pk)
+                try:
+                    project = Projects.objects.get(id=pk)
+                    contributor = Contributors.objects.get(project_id=pk, user_id=request.user)
+                except ObjectDoesNotExist:
+                    return Response("project inexistant et/ou tu n'es pas associé à celui-ci.")
+            except ValueError:
+                return Response("Tu dois entrer un chiffre.")
+            form = IssuesSerializers(data=request.data)
+            if form.is_valid():
+                print(form)
+                print(request.POST.get('assignee_user_id'))
+                title = form.data['title']
+                desc = form.data['desc']
+                tag = form.data['tag']
+                priority = form.data['priority']
+                status = form.data['status']
+                if request.POST.get('assignee_user_id') is None or request.POST.get('assignee_user_id') == "":
+                    assignee_user_id = request.user
+                else:
+                    assignee_user_id = request.POST.get('assignee_user_id')
+                    try:
+                        int(assignee_user_id)
+                        user = User.objects.get(id=assignee_user_id)
+                        contributor = Contributors.objects.get(project_id=project, user_id=user)
+                        if contributor.role == 'contributeur':
+                            pass
+                        else:
+                            return Response("La personne n'est pas associée à ce project.")
+                    except ValueError:
+                        return Response('Tu dois entrer un chiffre.')
+                    except ObjectDoesNotExist:
+                        return Response("Aucune personne ayant cet id est associée à ce project.")
+                try:
+                    issue = Issues(title=title, desc=desc, tag=tag,
+                                   priority=priority, project_id=project, status=status,
+                                   auteur_user_id=request.user, assignee_user_id=assignee_user_id)
+                    issue.save()
+                    return Response(form.data)
+                except IntegrityError:
+                    return Response("L'issue n'a pas été enregistrée.")
+            else:
+                return Response(form.errors)
+
+        else:
+            return Response("Tu dois entrer l'id du project auquel tu veux ajouter une issue.")
+
+
+class IssuesView(ModelViewSet):
+    queryset = Issues.objects.all()
+    serializer_class = IssuesSerializers
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+
+
+    def partial_update(self, request, *args, **kwargs):
+        pk_issue = self.kwargs.get('pk_issue')
+        print("tu es bien ici")
+        return Response("tu vas update")
+
+
