@@ -19,7 +19,7 @@ from rest_framework import routers
 from softdesk.views import ConnexionAPIView, sign_up, LoginApiView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView,\
     TokenVerifyView
-from softdesk.views import ProjectsView, UsersView, IssuesView
+from softdesk.views import ProjectsView, UsersView, IssuesView, CommentsView
 
 router = routers.SimpleRouter()
 #router.register('users', ConnexionAPIView, basename="users")
@@ -27,6 +27,7 @@ router.register('login', LoginApiView, basename="login")
 router.register(r'projects', ProjectsView, basename="projects")
 router.register('users', UsersView, basename='users')
 router.register('issues', IssuesView, basename="issues")
+router.register('comments', CommentsView, basename='comments')
 
 
 urlpatterns = [
@@ -48,8 +49,12 @@ urlpatterns = [
     })),
     path('api/projects/<pk>/issues/<pk_issue>/', IssuesView.as_view({
         'patch': 'partial_update',
-        'delete':'destroy'
-    }))
+        'delete': 'destroy'
+    })),
+    path('api/projects/<pk>/issues/<pk_issue>/comments/', CommentsView.as_view({
+        'get': 'get',
+        'post': 'create'
+    })),
    # path('api/projects/<pk>/issues/<pk_issues>/', IssuesView.as_view({
    #     'patch': "partial_update",
    # })),

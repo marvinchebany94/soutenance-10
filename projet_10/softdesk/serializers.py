@@ -30,7 +30,7 @@ class IssuesSerializers(ModelSerializer):
 class CommentsSerializers(ModelSerializer):
     class Meta:
         model = Comments
-        fields = ['description', 'author_user_id', 'issue_id', 'time_created']
+        fields = ['description']
 
 
 class SignUpSerializers(ModelSerializer):

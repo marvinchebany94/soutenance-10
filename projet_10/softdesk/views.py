@@ -7,8 +7,8 @@ from rest_framework.decorators import api_view, action
 from rest_framework.mixins import CreateModelMixin
 from rest_framework.viewsets import ModelViewSet
 from .serializers import UsersSerializers, SignUpSerializers, LoginSerializers, ProjectsSerializers, \
-    ContributorsSerializers, IssuesSerializers
-from .models import User, Projects, Contributors, Issues
+    ContributorsSerializers, IssuesSerializers, CommentsSerializers
+from .models import User, Projects, Contributors, Issues, Comments
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView,\
     TokenVerifyView
@@ -392,3 +392,86 @@ class IssuesView(ModelViewSet):
                 return Response("Tu ne peux pas supprimeer un problème qui n'a pas été créé par toi.",
                                 status=status.HTTP_404_NOT_FOUND)
             return Response("Le problème a été supprimé.", status=status.HTTP_200_OK)
+
+
+class CommentsView(ModelViewSet):
+    queryset = Comments.objects.all()
+    serializer_class = CommentsSerializers
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    def get(self, request, *args, **kwargs):
+        """
+        receperer tous les commentaires d'un problème id/projects/<pk>/issues/<pk_issue>/comments
+        """
+        if self.kwargs.get('pk') and self.kwargs.get('pk_issue'):
+            pk = self.kwargs.get('pk')
+            pk_issue = self.kwargs.get('pk_issue')
+            try:
+                int(pk)
+                int(pk_issue)
+                try:
+                    project = Projects.objects.get(id=pk)
+                except ObjectDoesNotExist:
+                    return Response("Le project n'existe pas", status=status.HTTP_404_NOT_FOUND)
+                try:
+                    Contributors.objects.get(project_id=project, user_id=self.request.user)
+                except ObjectDoesNotExist:
+                    return Response("Tu n'es pas associé au project demandé", status=status.HTTP_404_NOT_FOUND)
+                try:
+                    issue = Issues.objects.get(project_id=project, id=pk_issue)
+                    comments = Comments.objects.all()
+                    return Response(comments.filter(issue_id=issue).values())
+                except ObjectDoesNotExist:
+                    return Response("Aucun problème retrouné avec cet id.",
+                                    status=status.HTTP_404_NOT_FOUND)
+            except ValueError:
+                return Response("Il faut entrer un chiffre", status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response("Tu dois entrer l'id du projet", status=status.HTTP_404_NOT_FOUND)
+
+    def create(self, request, *args, **kwargs):
+        if self.kwargs.get('pk') and self.kwargs.get('pk_issue'):
+            pk = self.kwargs.get('pk')
+            pk_issue = self.kwargs.get('pk_issue')
+            try:
+                int(pk)
+                int(pk_issue)
+                try:
+                    project = Projects.objects.get(id=pk)
+                except ObjectDoesNotExist:
+                    return Response("Le project n'existe pas", status=status.HTTP_404_NOT_FOUND)
+                try:
+                    Contributors.objects.get(project_id=project, user_id=self.request.user)
+                except ObjectDoesNotExist:
+                    return Response("Tu n'es pas associé au project demandé", status=status.HTTP_404_NOT_FOUND)
+                try:
+                    issue = Issues.objects.get(project_id=project, id=pk_issue)
+                except ObjectDoesNotExist:
+                    return Response("Le problème n'existe pas", status=status.HTTP_404_NOT_FOUND)
+                form = CommentsSerializers(data=request.data)
+                if form.is_valid():
+                    description = form.data['description']
+                    try:
+                        Comments.objects.get(description=description, author_user_id=request.user,
+                                             issue_id=issue)
+                        return Response("Un commentaire similaire existe déjà dans la base de données.",
+                                        status=status.HTTP_404_NOT_FOUND)
+                    except ObjectDoesNotExist:
+                        pass
+                    try:
+                        comment = Comments(description=description, author_user_id=request.user,
+                                           issue_id=issue)
+                        comment.save()
+                        return Response(form.data)
+                    except IntegrityError:
+                        return Response("Erreur lors de l'enregistrement du commentaire.",
+                                        status=status.HTTP_404_NOT_FOUND)
+
+                else:
+                    return Response(form.errors)
+            except ValueError:
+                return Response("Tu dois entrer un chiffre.")
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
