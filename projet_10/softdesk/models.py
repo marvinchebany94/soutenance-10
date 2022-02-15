@@ -42,7 +42,8 @@ class Projects(models.Model):
             ('Android', 'Android')
         ]
     types = models.CharField(choices=TYPES, blank=False, max_length=20)
-    author_user_id = models.ForeignKey(User, on_delete=models.CASCADE, blank=False)
+    author_user_id = models.ForeignKey(User, on_delete=models.CASCADE,
+                                       blank=False)
     time_created = models.DateTimeField(auto_now_add=True)
 
     def user_has_project(self):
@@ -54,8 +55,11 @@ class Projects(models.Model):
 
 
 class Contributors(models.Model):
-    user_id = models.ForeignKey(User, blank=False, related_name="user", on_delete=models.CASCADE)
-    project_id = models.ForeignKey(Projects, blank=False, related_name="project", on_delete=models.CASCADE)
+    user_id = models.ForeignKey(User, blank=False, related_name="user",
+                                on_delete=models.CASCADE)
+    project_id = models.ForeignKey(Projects, blank=False,
+                                   related_name="project",
+                                   on_delete=models.CASCADE)
     PERMISSION = [
         ('CRUD', 'crud'),
         ('RC', 'rc'),
@@ -75,7 +79,7 @@ class Issues(models.Model):
         ('bug', 'bug'),
         ('amelioration', 'amélioration'),
         ('tâche', 'tâche')
-]
+    ]
     tag = models.CharField(blank=False, choices=TAG, max_length=20)
     PRIORITY = [
         ('faible', 'faible'),
@@ -91,8 +95,10 @@ class Issues(models.Model):
         ('terminé', 'terminé')
     ]
     status = models.CharField(choices=STATUS, blank=False, max_length=20)
-    auteur_user_id = models.ForeignKey(User, on_delete=models.CASCADE, blank=False)
-    assignee_user_id = models.ForeignKey(User, on_delete=models.CASCADE, blank=False,
+    auteur_user_id = models.ForeignKey(User, on_delete=models.CASCADE,
+                                       blank=False)
+    assignee_user_id = models.ForeignKey(User, on_delete=models.CASCADE,
+                                         blank=False,
                                          related_name="user_assigne")
     time_created = models.DateTimeField(auto_now_add=True)
 
@@ -102,7 +108,3 @@ class Comments(models.Model):
     author_user_id = models.ForeignKey(User, on_delete=models.CASCADE)
     issue_id = models.ForeignKey(Issues, on_delete=models.CASCADE, blank=False)
     date_created = models.DateTimeField(auto_now_add=True)
-
-
-
-
