@@ -11,7 +11,8 @@ class UsersSerializers(ModelSerializer):
 class ProjectsSerializers(ModelSerializer):
     class Meta:
         model = Projects
-        fields = ['title', 'description', 'types']
+        fields = ['id', 'title', 'description', 'types', 'time_created']
+        read_only_fields = ['id', 'time_created']
 
 
 class ContributorsSerializers(ModelSerializer):

@@ -90,10 +90,14 @@ class ProjectsView(ModelViewSet):
                 int(pk)
             except ValueError:
                 return 'erreur'
+
             project = get_object_or_404(Projects, id=pk)
             get_object_or_404(Contributors, project_id=project,
                               user_id=self.request.user)
-            return queryset.filter(id=pk)
+            data = queryset.filter(id=pk)
+            return data.values('id', 'title',
+                               'description',
+                               'types', 'time_created')
         else:
             print("tu es dans get query set")
             liste_projects = []
@@ -382,7 +386,12 @@ associée à ce project.", status=status.HTTP_404_NOT_FOUND)
                                    assignee_user_id=assignee_user_id)
                     issue.save()
 
-                    return Response(form.data)
+                    return Response(Issues.objects.filter(
+                        title=title, desc=desc, tag=tag,
+                        priority=priority, project_id=project,
+                        status=status,
+                        auteur_user_id=request.user,
+                        assignee_user_id=assignee_user_id).values())
                 except IntegrityError:
                     return Response("L'issue n'a pas été enregistrée.",
                                     status=status.HTTP_404_NOT_FOUND)
