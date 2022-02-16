@@ -209,10 +209,12 @@ class UsersView(ModelViewSet):
         contributors = Contributors.objects.filter(project_id=project)
         for user in contributors:
             contributors_id.append(user.user_id_id)
-
-        return Response(users.filter(id__in=contributors_id).values(
+            """
+        return Response((users.filter(id__in=contributors_id).values(
             'id', 'email',
-            'first_name', 'last_name'))
+            'first_name', 'last_name')"""
+        return Response(contributors.values('user_id', 'project_id',
+                                            'permission', 'role'))
 
     def destroy(self, request, *args, **kwargs):
         try:
